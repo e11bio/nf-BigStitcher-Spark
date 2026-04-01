@@ -253,6 +253,11 @@
                     "default": 15,
                     "description": "Memory for the BigStitcher app (in GB)"
                 },
+                "spark_event_log": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable Spark event logging for task-level metrics (IO, GC, memory)"
+                },
                 "input_data_files": {
                     "type": "string",
                     "description": "Additional data files that need to be available"

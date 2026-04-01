@@ -31,6 +31,13 @@ process PREPARE_SPARK_CONFIG {
     echo "Create spark config file \${spark_config_filepath}"
     echo "${spark_config_content}" > \${spark_config_filepath}
     echo "spark.local.dir=\${full_spark_local_dir}" >> \${spark_config_filepath}
+    # If event logging is enabled, set the event log dir OUTSIDE the spark work dir.
+    # The worker cleanup (spark.worker.cleanup.enabled=true) deletes everything inside
+    # the spark work dir, so event logs must be placed in a sibling directory.
+    if grep -q 'spark.eventLog.enabled=true' \${spark_config_filepath}; then
+        mkdir -p \${full_spark_work_dir}/../spark-event-logs
+        echo "spark.eventLog.dir=\${full_spark_work_dir}/../spark-event-logs" >> \${spark_config_filepath}
+    fi
     """
 }
 

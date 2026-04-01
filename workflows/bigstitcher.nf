@@ -108,10 +108,18 @@ workflow BIGSTITCHER {
                 module_inputs: [ meta, module.module_class, module_args ]
             }
 
+        // Enable Spark event logging when spark_event_log is true.
+        // Event logs land in ${work_dir}/${sessionId}/spark/${meta.id}/events/
+        def spark_extra_config = [:]
+        if (params.spark_event_log) {
+            spark_extra_config['spark.eventLog.enabled'] = 'true'
+            // eventLog.dir is set per-task in PREPARE_SPARK_CONFIG using spark.work_dir
+        }
+
         BIGSTITCHER_SPARK(
             bigstitcher_inputs.data_inputs,
             bigstitcher_inputs.module_inputs,
-            [:], // spark config
+            spark_extra_config,
             params.distributed && module.parallelizable,
             file("${params.work_dir}/${workflow.sessionId}"),
             params.spark_workers,
