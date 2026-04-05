@@ -137,7 +137,7 @@ process SPARK_STARTWORKER {
     label 'process_long'
     container 'ghcr.io/janeliascicomp/spark:3.3.2-scala2.12-java17-ubuntu24.04'
     cpus { spark.worker_cores }
-    memory { spark.worker_memory }
+    memory { spark.slurm_worker_memory }
 
     input:
     tuple val(meta), val(spark), path(spark_work_dir), val(worker_id)
@@ -278,6 +278,10 @@ workflow SPARK_START {
             parallelism: (n_spark_workers * spark_worker_cpus),
             worker_memory: (spark_worker_cpus * spark_gb_per_cpu + 1)+" GB", // 1 GB of overhead for Spark, the rest for executors
             executor_memory: (spark_worker_cpus * spark_gb_per_cpu)+" GB",
+            // SLURM memory includes JVM/container overhead: max(2GB, 10% of executor memory)
+            // to avoid OverMemoryKill from off-heap, GC, metaspace, etc.
+            slurm_worker_memory: (spark_worker_cpus * spark_gb_per_cpu + 1 + Math.max(2, (int) Math.ceil(spark_worker_cpus * spark_gb_per_cpu * 0.10)))+" GB",
+            slurm_driver_memory: ((spark_driver_mem_gb ?: (spark_driver_cpus * spark_gb_per_cpu)) + Math.max(2, (int) Math.ceil((spark_driver_mem_gb ?: (spark_driver_cpus * spark_gb_per_cpu)) * 0.10)))+" GB",
         ]
         def r = [
             meta,
@@ -348,7 +352,9 @@ workflow SPARK_START {
             def (meta, spark, spark_work_dir) = it
             spark.workers = 1
             spark.driver_cores = spark_driver_cpus + spark_worker_cpus
-            spark.driver_memory = (2 + spark_worker_cpus * spark_gb_per_cpu) + " GB"
+            def local_driver_mem = 2 + spark_worker_cpus * spark_gb_per_cpu
+            spark.driver_memory = local_driver_mem + " GB"
+            spark.slurm_driver_memory = (local_driver_mem + Math.max(2, (int) Math.ceil(local_driver_mem * 0.10))) + " GB"
             spark.uri = 'local[*]'
             log.debug "Create local Spark context: ${meta}, ${spark}"
             [ meta, spark ]
