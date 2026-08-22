@@ -19,6 +19,9 @@ process BIGSTITCHER_MODULE {
     def executor_memory = spark.executor_memory.replace(" KB",'k').replace(" MB",'m').replace(" GB",'g').replace(" TB",'t')
     def driver_memory = spark.driver_memory.replace(" KB",'k').replace(" MB",'m').replace(" GB",'g').replace(" TB",'t')
     def app_jar = '/app/app.jar'
+    // extra driver JVM options, e.g. -Dmpicbg.models.TileUtil.seed=<long> to seed the
+    // solver's tile shuffle, or -XX:ActiveProcessorCount=1 to make its schedule deterministic
+    def extra_driver_java_options = task.ext.driver_java_options ? " ${task.ext.driver_java_options}" : ''
     """
     CMD=(
         /opt/scripts/runapp.sh
@@ -35,7 +38,7 @@ process BIGSTITCHER_MODULE {
         --spark-conf "spark.driver.extraClassPath=${app_jar}"
         --spark-conf "spark.executor.extraClassPath=${app_jar}"
         --spark-conf "spark.jars.ivy=\${SPARK_WORK_DIR}"
-        --spark-conf "spark.driver.extraJavaOptions=-Dnative.libpath.verbose=true"
+        --spark-conf "spark.driver.extraJavaOptions=-Dnative.libpath.verbose=true${extra_driver_java_options}"
         ${args}
     )
     echo "CMD: \${CMD[@]}"
